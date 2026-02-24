@@ -10,6 +10,7 @@ REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "python:excel-cleaner-bot:v1.
 REDDIT_USERNAME = os.getenv("REDDIT_USERNAME")
 REDDIT_PASSWORD = os.getenv("REDDIT_PASSWORD")
 PROXY_SERVER = os.getenv("PROXY_SERVER", "http://127.0.0.1:7890") # Default to common local proxy
+FEISHU_WEBHOOK_URL = os.getenv("FEISHU_WEBHOOK_URL", "https://open.feishu.cn/open-apis/bot/v2/hook/5676dfc2-ebe7-4deb-b699-b70b0081e927")
 
 # Validation
 def validate_config():

@@ -10,4 +10,7 @@ PYTHON_EXEC="python3"
 # 2. (Optional) Auto-Post using Browser Simulation (Requires valid User/Pass in .env) - Weekly
 # 0 9 * * 1 cd $PROJECT_DIR && $PYTHON_EXEC -m marketing.reddit_bot.publisher_browser marketing/content_templates/weekly_update.md --subreddit test >> marketing/reddit_bot/logs/publish.log 2>&1
 
+# 3. Daily Task Report to Feishu (Runs at 9:00 AM)
+# 0 9 * * * cd $PROJECT_DIR && $PYTHON_EXEC -m marketing.reddit_bot.report_tasks >> marketing/reddit_bot/logs/report.log 2>&1
+
 echo "Cron templates prepared (Browser/RSS Mode). Run 'crontab -e' to enable."
