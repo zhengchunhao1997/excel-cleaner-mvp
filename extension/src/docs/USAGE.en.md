@@ -1,4 +1,4 @@
-# execelMerge (Extension) User Guide
+# excelMerge (Extension) User Guide
 
 Last updated: 2026-02-05
 

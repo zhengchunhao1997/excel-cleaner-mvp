@@ -1,6 +1,6 @@
 export const translations = {
   en: {
-    title: 'execelMerge',
+    title: 'excelMerge',
     subtitle: 'Premium table unification for messy exports',
     language: '中文',
     docs: 'Docs',
@@ -62,7 +62,7 @@ export const translations = {
     aiCleaningDone: 'Processing Done',
   },
   zh: {
-    title: 'execelMerge',
+    title: 'excelMerge',
     subtitle: '把乱表合成一张“标准表”',
     language: 'English',
     docs: '使用说明',

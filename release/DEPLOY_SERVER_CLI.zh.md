@@ -1,4 +1,4 @@
-## execelMerge 部署文档（命令行 + Nginx）
+## excelMerge 部署文档（命令行 + Nginx）
 
 适用场景：
 - 使用 Nginx（宝塔或手工均可）做反代与静态站点
@@ -27,7 +27,7 @@ sk-965381d9fba2471d93687790fa5df4e2
 推荐脚本：
 
 ```bash
-cd execelMerge-mvp
+cd excel-cleaner-mvp
 VITE_API_BASE="http://你的域名或IP" bash release/build_artifacts.sh
 ```
 
@@ -40,9 +40,9 @@ VITE_API_BASE="http://你的域名或IP" bash release/build_artifacts.sh
 建议目录：
 
 ```bash
-mkdir -p /opt/execelMerge/server
-tar -xzf server.tar.gz -C /opt/execelMerge/server
-cd /opt/execelMerge/server
+mkdir -p /opt/excelMerge/server
+tar -xzf server.tar.gz -C /opt/excelMerge/server
+cd /opt/excelMerge/server
 ```
 
 解压后必须存在：
@@ -77,9 +77,9 @@ nano .env.production
 首次前台启动验证：
 
 ```bash
-cd /opt/execelMerge/server
+cd /opt/excelMerge/server
 NODE_ENV=production \
-DOTENV_CONFIG_PATH=/opt/execelMerge/server/.env.production \
+DOTENV_CONFIG_PATH=/opt/excelMerge/server/.env.production \
 node dist/index.js
 ```
 
@@ -104,15 +104,15 @@ bash run.sh stop
 curl http://127.0.0.1:3000/
 ```
 
-期望返回：`execelMerge API is running`
+期望返回：`excelMerge API is running`
 
 ### 3) 前端部署（服务器）
 
 建议目录：
 
 ```bash
-mkdir -p /var/www/execelMerge-frontend
-tar -xzf frontend.tar.gz -C /var/www/execelMerge-frontend
+mkdir -p /var/www/excelMerge-frontend
+tar -xzf frontend.tar.gz -C /var/www/excelMerge-frontend
 ```
 
 该目录应包含：
@@ -129,7 +129,7 @@ server {
   listen 80;
   server_name 你的域名或IP;
 
-  root /website/execelMerge-server/execelMerge-frontend;
+  root /website/excelMerge-server/excelMerge-frontend;
   index index.html;
 
   location / {
@@ -164,8 +164,8 @@ server {
 后端更新：
 
 ```bash
-cd /opt/execelMerge/server
-tar -xzf server.tar.gz -C /opt/execelMerge/server
+cd /opt/excelMerge/server
+tar -xzf server.tar.gz -C /opt/excelMerge/server
 ```
 
 仅当 `package-lock.json` 变化时重新安装依赖：
@@ -183,7 +183,7 @@ bash run.sh restart
 前端更新：
 
 ```bash
-tar -xzf frontend.tar.gz -C /var/www/execelMerge-frontend
+tar -xzf frontend.tar.gz -C /var/www/excelMerge-frontend
 ```
 
 ### 6) 常见问题

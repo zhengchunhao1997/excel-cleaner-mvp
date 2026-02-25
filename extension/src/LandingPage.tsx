@@ -22,7 +22,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, lang, setLang }) => 
   const content = {
     zh: {
       title: "让混乱的表格，瞬间归于统一",
-      subtitle: "execelMerge 是一款专为数据分析师和行政财务设计的智能表格清洗工具。通过 DeepSeek AI 技术，自动识别跨语言、跨格式的异构表头，一键完成数据纵向追加或横向关联。",
+      subtitle: "excelMerge 是一款专为数据分析师和行政财务设计的智能表格清洗工具。通过 DeepSeek AI 技术，自动识别跨语言、跨格式的异构表头，一键完成数据纵向追加或横向关联。",
       startBtn: "开始免费使用",
       features: [
         {
@@ -55,7 +55,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, lang, setLang }) => 
     },
     en: {
       title: "Unify Messy Sheets in Seconds",
-      subtitle: "execelMerge is an AI-powered table cleaning tool designed for data analysts. Powered by DeepSeek, it automatically recognizes cross-language, heterogeneous headers and completes data union or join with one click.",
+      subtitle: "excelMerge is an AI-powered table cleaning tool designed for data analysts. Powered by DeepSeek, it automatically recognizes cross-language, heterogeneous headers and completes data union or join with one click.",
       startBtn: "Get Started Free",
       features: [
         {
@@ -110,7 +110,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, lang, setLang }) => 
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 p-2 shadow-lg shadow-amber-500/20">
             <FileSpreadsheet className="h-full w-full text-zinc-950" />
           </div>
-          <span className="text-xl font-bold tracking-tight">execelMerge</span>
+          <span className="text-xl font-bold tracking-tight">excelMerge</span>
         </div>
         <div className="flex items-center gap-4">
           <button 
@@ -230,7 +230,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, lang, setLang }) => 
         <div className="mx-auto max-w-7xl px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2 text-zinc-500">
             <FileSpreadsheet className="h-5 w-5" />
-            <span className="text-sm font-medium">© 2026 execelMerge. Built for Data Efficiency.</span>
+            <span className="text-sm font-medium">© 2026 excelMerge. Built for Data Efficiency.</span>
           </div>
           <div className="flex items-center gap-8 text-sm text-zinc-500">
             <a href="#" className="hover:text-zinc-300 transition">Privacy</a>

@@ -12,7 +12,7 @@ const getHostPermissions = () => {
 
 export default defineManifest(() => ({
   manifest_version: 3,
-  name: 'execelMerge',
+  name: 'excelMerge',
   version: '1.0.0',
   description: 'Auto-merge and clean Excel files with AI',
   side_panel: {
@@ -28,4 +28,3 @@ export default defineManifest(() => ({
     type: 'module',
   },
 }));
-

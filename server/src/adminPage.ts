@@ -8,7 +8,7 @@ export const serveAdminPage = (req: Request, res: Response) => {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>execelMerge - 后台</title>
+  <title>excelMerge - 后台</title>
   <style>
     :root { color-scheme: dark; }
     body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: #09090b; color: #e4e4e7; }
@@ -66,7 +66,7 @@ export const serveAdminPage = (req: Request, res: Response) => {
   <div class="wrap">
     <div class="row" style="justify-content: space-between">
       <div>
-        <div class="h">execelMerge - 后台数据面板</div>
+        <div class="h">excelMerge - 后台数据面板</div>
         <div class="muted">按天 / 周 / 月查看使用情况与反馈。数据存储在 PostgreSQL。</div>
       </div>
       <div class="row">

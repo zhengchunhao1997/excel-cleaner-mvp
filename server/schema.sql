@@ -1,4 +1,4 @@
--- execelMerge Schema Update
+-- excelMerge Schema Update
 -- Created at: 2026-02-09
 
 CREATE TABLE IF NOT EXISTS telemetry_events (

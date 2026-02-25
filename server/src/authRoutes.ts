@@ -45,15 +45,15 @@ authRouter.post('/auth/send-code', (req: Request, res: Response) => {
     );
     const transporter = createTransport();
     const fromAddr = process.env.SMTP_FROM || process.env.SMTP_USER || 'no-reply@example.com';
-    const from = `"execelMerge" <${fromAddr}>`;
+    const from = `"excelMerge" <${fromAddr}>`;
     if (transporter) {
       console.log(`Sending mail from ${from} to ${e}...`);
       try {
-        const subject = `[execelMerge] 您的验证码 / Your Verification Code: ${code}`;
+        const subject = `[excelMerge] 您的验证码 / Your Verification Code: ${code}`;
         const html = `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #2563eb; text-align: center;">execelMerge</h2>
-            <p style="font-size: 16px; color: #333;">您好！感谢您注册使用 <strong>execelMerge</strong>。</p>
+            <h2 style="color: #2563eb; text-align: center;">excelMerge</h2>
+            <p style="font-size: 16px; color: #333;">您好！感谢您注册使用 <strong>excelMerge</strong>。</p>
             <p style="font-size: 16px; color: #333;">您的验证码为：</p>
             <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #2563eb; margin: 20px 0; border-radius: 5px;">
               ${code}
@@ -62,7 +62,7 @@ authRouter.post('/auth/send-code', (req: Request, res: Response) => {
             
             <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
             
-            <p style="font-size: 16px; color: #333;">Hello! Thank you for registering with <strong>execelMerge</strong>.</p>
+            <p style="font-size: 16px; color: #333;">Hello! Thank you for registering with <strong>excelMerge</strong>.</p>
             <p style="font-size: 16px; color: #333;">Your verification code is:</p>
             <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #2563eb; margin: 20px 0; border-radius: 5px;">
               ${code}
@@ -70,7 +70,7 @@ authRouter.post('/auth/send-code', (req: Request, res: Response) => {
             <p style="font-size: 14px; color: #666;">The code is valid for 10 minutes. If you did not request this, please ignore this email.</p>
             
             <p style="font-size: 12px; color: #999; text-align: center; margin-top: 40px;">
-              © ${new Date().getFullYear()} execelMerge. All rights reserved.
+              © ${new Date().getFullYear()} excelMerge. All rights reserved.
             </p>
           </div>
         `;

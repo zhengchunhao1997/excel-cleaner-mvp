@@ -1,4 +1,4 @@
-# execelMerge（插件）使用说明
+# excelMerge（插件）使用说明
 
 最后更新：2026-02-05
 

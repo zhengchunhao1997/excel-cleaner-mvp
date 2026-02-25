@@ -44,7 +44,7 @@ app.get('/admin', serveAdminPage);
 
 // Health check
 app.get('/', (req, res) => {
-  res.send('execelMerge API is running');
+  res.send('excelMerge API is running');
 });
 
 (async () => {
