@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "http://8.138.35.89/api/$1" },
+    { "source": "/admin", "destination": "http://8.138.35.89/admin" },
+    { "source": "/admin/(.*)", "destination": "http://8.138.35.89/admin/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
