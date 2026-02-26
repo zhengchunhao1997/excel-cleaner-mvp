@@ -3,10 +3,20 @@ import { useDropzone } from 'react-dropzone';
 import { Upload, FileSpreadsheet, Trash2, ArrowRight, Download, Loader2, Edit2, Globe, Sparkles, ShieldCheck, BookOpen, X, LogOut } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { translations, type Language } from './i18n';
-import usageEn from './docs/USAGE.en.md?raw';
-import usageZh from './docs/USAGE.zh.md?raw';
 import { getClientId, submitFeedback, trackEvent } from './telemetry';
 import LandingPage from './LandingPage';
+import { getDocsContent, type DocsSectionId } from './docsContent';
+import {
+  applyTemplateToFiles,
+  enforceTemplatesLimit,
+  findBestTemplateForFiles,
+  loadTemplates,
+  markTemplateUsed,
+  saveTemplates,
+  schemaKeyFromHeaders,
+  upsertTemplate,
+  type MappingTemplateV1,
+} from './mappingTemplates';
 
 const API_ORIGIN = (import.meta as any).env?.VITE_API_BASE || 'http://8.138.35.89';
 const API_BASE = `${String(API_ORIGIN).replace(/\/+$/g, '')}/api`;
@@ -34,6 +44,10 @@ function App() {
   const [files, setFiles] = useState<FileData[]>([]);
   const [loading, setLoading] = useState(false);
   const [mappingResult, setMappingResult] = useState<MappingResponse | null>(null);
+  const [matchedTemplate, setMatchedTemplate] = useState<MappingTemplateV1 | null>(null);
+  const [templatesCount, setTemplatesCount] = useState(0);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [saveTemplateName, setSaveTemplateName] = useState('');
   const [editingField, setEditingField] = useState<{ unifiedField: string, fileName: string } | null>(null);
   const [mergeMode, setMergeMode] = useState<MergeMode>('join');
   const [joinKeyField, setJoinKeyField] = useState<string>('');
@@ -43,6 +57,7 @@ function App() {
     return browserLang.startsWith('zh') ? 'zh' : 'en';
   });
   const [docsOpen, setDocsOpen] = useState(false);
+  const [docsSection, setDocsSection] = useState<DocsSectionId>('quick_start');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState<number>(5);
   const [feedbackEmail, setFeedbackEmail] = useState<string>('');
@@ -70,6 +85,29 @@ function App() {
   const [otpStatus, setOtpStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   const t = translations[lang];
+  const TEMPLATE_LIMIT = 50;
+
+  useEffect(() => {
+    if (showLanding) return;
+    try {
+      if (!localStorage.getItem('docs_seen')) {
+        setDocsSection('quick_start');
+        setDocsOpen(true);
+      }
+    } catch {
+    }
+  }, [showLanding]);
+
+  useEffect(() => {
+    try {
+      const k = 'excel_merge_pv_sent';
+      if (!sessionStorage.getItem(k)) {
+        sessionStorage.setItem(k, '1');
+        trackEvent('page_view', { path: location.pathname });
+      }
+    } catch {
+    }
+  }, []);
 
   useEffect(() => {
     if (otpCountdown > 0) {
@@ -210,6 +248,21 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (files.length < 1) {
+      setMatchedTemplate(null);
+      setTemplatesCount(0);
+      return;
+    }
+    const templates = loadTemplates(localStorage);
+    setTemplatesCount(templates.length);
+    const match = findBestTemplateForFiles(
+      templates,
+      files.map((f) => ({ fileName: f.name, headers: f.headers })),
+    );
+    setMatchedTemplate(match);
+  }, [files]);
+
   const fetchMe = async (token: string) => {
     try {
       const res = await fetch(`${API_BASE}/auth/me`, {
@@ -313,9 +366,31 @@ function App() {
     setMappingResult(null);
   };
 
-  const handleAnalyze = async () => {
+  const applyTemplate = (template: MappingTemplateV1) => {
+    const now = Date.now();
+    const res = applyTemplateToFiles(
+      template,
+      files.map((f) => ({ fileName: f.name, headers: f.headers })),
+    );
+    setMappingResult(res);
+    setMergeMode('join');
+    setJoinKeyField(pickDefaultJoinKey(res.unifiedSchema));
+    const templates = loadTemplates(localStorage);
+    const nextTemplate = markTemplateUsed(template, now);
+    const next = enforceTemplatesLimit(upsertTemplate(templates, nextTemplate), TEMPLATE_LIMIT);
+    saveTemplates(localStorage, next);
+    setTemplatesCount(next.length);
+    showToast(lang === 'zh' ? '已应用映射模板' : 'Template applied', 'success');
+  };
+
+  const handleAnalyze = async (forceAi: boolean = false) => {
     if (!authToken) {
       setLoginOpen(true);
+      return;
+    }
+    if (!forceAi && matchedTemplate) {
+      applyTemplate(matchedTemplate);
+      trackEvent('analyze_use_template', { templateId: matchedTemplate.id, templatesCount });
       return;
     }
     setLoading(true);
@@ -348,6 +423,66 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSaveTemplate = () => {
+    if (!mappingResult) return;
+    if (files.length < 1) return;
+    const defaultName =
+      lang === 'zh'
+        ? `映射模板 ${new Date().toISOString().slice(0, 10)}`
+        : `Mapping template ${new Date().toISOString().slice(0, 10)}`;
+    setSaveTemplateName(defaultName);
+    setSaveTemplateOpen(true);
+  };
+
+  const confirmSaveTemplate = () => {
+    if (!mappingResult) return;
+    if (files.length < 1) return;
+    const name = saveTemplateName.trim();
+    if (!name) return;
+
+    const now = Date.now();
+    const id = typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : `${now}-${Math.random().toString(16).slice(2)}`;
+
+    const template: MappingTemplateV1 = {
+      version: 1,
+      id,
+      name: name.trim(),
+      createdAt: now,
+      updatedAt: now,
+      fileSchemas: files.map((f) => ({
+        schemaKey: schemaKeyFromHeaders(f.headers),
+        headers: f.headers,
+      })),
+      unifiedSchema: mappingResult.unifiedSchema,
+      mappings: files.map((f) => {
+        const m = mappingResult.mappings.find((mm) => mm.fileName === f.name);
+        return {
+          schemaKey: schemaKeyFromHeaders(f.headers),
+          mapping: m?.mapping ?? {},
+        };
+      }),
+      transformations: mappingResult.transformations,
+      lastUsedAt: now,
+      useCount: 1,
+    };
+
+    const templates = loadTemplates(localStorage);
+    const next = enforceTemplatesLimit(upsertTemplate(templates, template), TEMPLATE_LIMIT);
+    saveTemplates(localStorage, next);
+    setTemplatesCount(next.length);
+    setMatchedTemplate(findBestTemplateForFiles(next, files.map((f) => ({ fileName: f.name, headers: f.headers }))));
+    setSaveTemplateOpen(false);
+    showToast(
+      lang === 'zh'
+        ? `模板已保存到本地浏览器（最多保留 ${TEMPLATE_LIMIT} 个）`
+        : `Template saved locally (keeps up to ${TEMPLATE_LIMIT})`,
+      'success',
+    );
+    trackEvent('template_saved', { templatesCount: next.length });
   };
 
   const sendCode = async () => {
@@ -697,7 +832,7 @@ function App() {
             {authUser?.plan === 'admin' && authToken && (
               <button
                 onClick={() => {
-                  const adminUrl = `${String(API_ORIGIN).replace(/\/+$/g, '')}/admin?jwt=${encodeURIComponent(authToken)}`;
+                  const adminUrl = `${String(API_ORIGIN).replace(/\/+$/g, '')}/admin?token=${encodeURIComponent(authToken)}`;
                   window.location.href = adminUrl;
                 }}
                 className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10 transition"
@@ -708,8 +843,20 @@ function App() {
             )}
             <button
               onClick={() => setDocsOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10 transition"
+              className="relative inline-flex items-center gap-2 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-2 text-xs font-medium text-amber-100 hover:bg-amber-400/15 hover:border-amber-400/35 transition shadow-[0_10px_40px_-18px_rgba(245,158,11,0.55)]"
             >
+              {(() => {
+                try {
+                  return !localStorage.getItem('docs_seen');
+                } catch {
+                  return false;
+                }
+              })() && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-300/80 opacity-75" />
+                  <span className="relative inline-flex h-3 w-3 rounded-full bg-amber-300" />
+                </span>
+              )}
               <BookOpen className="h-4 w-4 text-zinc-300" />
               {t.docs}
             </button>
@@ -754,7 +901,13 @@ function App() {
             <button
               type="button"
               className="absolute inset-0 bg-black/70"
-              onClick={() => setDocsOpen(false)}
+              onClick={() => {
+                try {
+                  localStorage.setItem('docs_seen', '1');
+                } catch {
+                }
+                setDocsOpen(false);
+              }}
               aria-label="Close docs"
             />
             <div className="absolute inset-x-0 top-0 mx-auto mt-4 w-[min(980px,calc(100%-2rem))] h-[calc(100%-2rem)] rounded-2xl border border-white/10 bg-zinc-950/95 backdrop-blur shadow-2xl overflow-hidden">
@@ -762,20 +915,192 @@ function App() {
                 <div className="text-sm font-semibold text-zinc-100">{t.docsTitle}</div>
                 <button
                   type="button"
-                  onClick={() => setDocsOpen(false)}
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('docs_seen', '1');
+                    } catch {
+                    }
+                    setDocsOpen(false);
+                  }}
                   className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10 transition inline-flex items-center gap-2"
                 >
                   <X className="h-4 w-4 text-zinc-300" />
                   {t.close}
                 </button>
               </div>
-              <div className="h-[calc(100%-52px)] overflow-auto p-4">
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <pre className="whitespace-pre-wrap text-xs leading-relaxed text-zinc-200">
-                    {lang === 'zh' ? usageZh : usageEn}
-                  </pre>
-                </div>
+              <div className="h-[calc(100%-52px)] overflow-hidden">
+                {(() => {
+                  const docs = getDocsContent(lang);
+                  const section = docs.sections.find((s) => s.id === docsSection) || docs.sections[0];
+                  const seen = (() => {
+                    try {
+                      return Boolean(localStorage.getItem('docs_seen'));
+                    } catch {
+                      return true;
+                    }
+                  })();
+                  return (
+                    <div className="h-full grid grid-cols-1 md:grid-cols-[260px_1fr]">
+                      <div className="border-b md:border-b-0 md:border-r border-white/10 bg-black/20">
+                        <div className="p-4">
+                          <div className="text-xs text-zinc-400">{docs.title}</div>
+                          {!seen && (
+                            <div className="mt-2 text-[11px] text-amber-200/90">
+                              {lang === 'zh' ? '建议先看 30 秒：快速开始 → 导出。' : 'Start here: Quick Start → Export.'}
+                            </div>
+                          )}
+                        </div>
+                        <div className="px-2 pb-3 overflow-auto h-[calc(100%-56px)]">
+                          {docs.sections.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => setDocsSection(s.id)}
+                              className={[
+                                'w-full text-left px-3 py-2 rounded-xl border transition mb-1',
+                                s.id === section.id
+                                  ? 'border-amber-400/30 bg-amber-400/10 text-amber-100'
+                                  : 'border-transparent hover:border-white/10 hover:bg-white/5 text-zinc-200',
+                              ].join(' ')}
+                            >
+                              <div className="text-xs font-medium">{s.title}</div>
+                              {s.subtitle && <div className="text-[11px] text-zinc-400 mt-0.5">{s.subtitle}</div>}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="overflow-auto p-4 md:p-6">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <div className="text-lg font-semibold text-zinc-50">{section.title}</div>
+                            {section.subtitle && <div className="mt-1 text-xs text-zinc-400">{section.subtitle}</div>}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                localStorage.setItem('docs_seen', '1');
+                              } catch {
+                              }
+                              setDocsOpen(false);
+                            }}
+                            className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10 transition inline-flex items-center gap-2"
+                          >
+                            <X className="h-4 w-4 text-zinc-300" />
+                            {t.close}
+                          </button>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-1 gap-3">
+                          {section.cards.map((c, idx) => (
+                            <div key={idx} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                              <div className="text-sm font-semibold text-zinc-100">{c.title}</div>
+                              {c.description && <div className="mt-1 text-xs text-zinc-300">{c.description}</div>}
+                              {c.steps && (
+                                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {c.steps.map((st, sidx) => (
+                                    <div key={sidx} className="rounded-2xl border border-white/10 bg-black/30 p-3">
+                                      <div className="flex items-center gap-2">
+                                        <div className="h-6 w-6 rounded-lg border border-amber-400/25 bg-amber-400/10 text-amber-200 flex items-center justify-center text-[11px] font-semibold">
+                                          {sidx + 1}
+                                        </div>
+                                        <div className="text-xs font-semibold text-zinc-100">{st.title}</div>
+                                      </div>
+                                      <div className="mt-2 text-[11px] leading-relaxed text-zinc-300">{st.detail}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {c.bullets && (
+                                <ul className="mt-3 space-y-2 text-[11px] leading-relaxed text-zinc-300">
+                                  {c.bullets.map((b, bidx) => (
+                                    <li key={bidx} className="flex gap-2">
+                                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-300/80" />
+                                      <span className="min-w-0">{b}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
+            </div>
+          </div>
+        )}
+
+        {saveTemplateOpen && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-4">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/70"
+              onClick={() => setSaveTemplateOpen(false)}
+              aria-label="Close template"
+            />
+            <div className="relative w-full max-w-[520px] rounded-2xl border border-white/10 bg-zinc-950/95 backdrop-blur shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 bg-black/30">
+                <div className="text-sm font-semibold text-zinc-100">
+                  {lang === 'zh' ? '保存映射模板' : 'Save mapping template'}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSaveTemplateOpen(false)}
+                  className="rounded-xl border border-white/10 bg-white/5 px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200 transition"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <form
+                className="p-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  confirmSaveTemplate();
+                }}
+              >
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-xs text-zinc-300">
+                    {lang === 'zh' ? '模板名称' : 'Template name'}
+                  </div>
+                  <input
+                    value={saveTemplateName}
+                    onChange={(e) => setSaveTemplateName(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-zinc-100 outline-none focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/20"
+                    autoFocus
+                    placeholder={lang === 'zh' ? '例如：订单表 + 发货表 Join' : 'e.g. Orders + Shipments Join'}
+                  />
+                  <div className="mt-2 text-[11px] text-zinc-500">
+                    {lang === 'zh'
+                      ? `模板保存在本地浏览器（最多保留 ${TEMPLATE_LIMIT} 个，按最近使用自动清理）`
+                      : `Stored locally (keeps up to ${TEMPLATE_LIMIT}, auto-cleans by recency)`}
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSaveTemplateOpen(false)}
+                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10 transition"
+                    >
+                      {t.close}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!saveTemplateName.trim()}
+                      className={[
+                        'rounded-2xl px-4 py-3 text-sm font-medium flex items-center gap-2 transition',
+                        !saveTemplateName.trim()
+                          ? 'bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed'
+                          : 'bg-emerald-400 text-zinc-950 hover:bg-emerald-300 shadow-[0_10px_40px_-18px_rgba(52,211,153,0.6)]',
+                      ].join(' ')}
+                    >
+                      {lang === 'zh' ? '保存' : 'Save'}
+                    </button>
+                  </div>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -1089,28 +1414,64 @@ function App() {
               </div>
 
               {!mappingResult && (
-                <button
-                  onClick={handleAnalyze}
-                  disabled={files.length < 1 || loading}
-                  className={[
-                    'mt-4 w-full rounded-2xl px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 transition',
-                    files.length < 1 || loading
-                      ? 'bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed'
-                      : 'bg-amber-400 text-zinc-950 hover:bg-amber-300 shadow-[0_10px_40px_-18px_rgba(245,158,11,0.7)]',
-                  ].join(' ')}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {t.analyzing}
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      {t.analyzeBtn}
-                    </>
+                <div className="mt-4 space-y-2">
+                  {matchedTemplate && (
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-zinc-200">
+                      <div className="font-medium text-zinc-100 truncate">
+                        {(lang === 'zh' ? '发现模板' : 'Template found') + ': ' + matchedTemplate.name}
+                      </div>
+                      <div className="mt-1 text-[11px] text-zinc-400">
+                        {lang === 'zh' ? '可直接套用，无需再次分析' : 'Apply it to skip AI analyze'}
+                      </div>
+                    </div>
                   )}
-                </button>
+
+                  <div className={matchedTemplate ? 'grid grid-cols-2 gap-2' : ''}>
+                    <button
+                      onClick={() => handleAnalyze()}
+                      disabled={files.length < 1 || loading}
+                      className={[
+                        'w-full rounded-2xl px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 transition',
+                        files.length < 1 || loading
+                          ? 'bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed'
+                          : 'bg-amber-400 text-zinc-950 hover:bg-amber-300 shadow-[0_10px_40px_-18px_rgba(245,158,11,0.7)]',
+                      ].join(' ')}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {t.analyzing}
+                        </>
+                      ) : matchedTemplate ? (
+                        <>
+                          <BookOpen className="h-4 w-4" />
+                          {lang === 'zh' ? '应用模板' : 'Apply template'}
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          {t.analyzeBtn}
+                        </>
+                      )}
+                    </button>
+
+                    {matchedTemplate && (
+                      <button
+                        onClick={() => handleAnalyze(true)}
+                        disabled={files.length < 1 || loading}
+                        className={[
+                          'w-full rounded-2xl px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 transition',
+                          files.length < 1 || loading
+                            ? 'bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed'
+                            : 'bg-white/5 border border-white/10 text-zinc-200 hover:bg-white/10',
+                        ].join(' ')}
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        {lang === 'zh' ? '重新分析' : 'Analyze'}
+                      </button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </section>
@@ -1128,12 +1489,20 @@ function App() {
               </div>
 
               {mappingResult && (
-                <button
-                  onClick={() => setMappingResult(null)}
-                  className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10 transition"
-                >
-                  {t.reset}
-                </button>
+                <div className="shrink-0 flex items-center gap-2">
+                  <button
+                    onClick={handleSaveTemplate}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10 transition"
+                  >
+                    {lang === 'zh' ? '保存模板' : 'Save template'}
+                  </button>
+                  <button
+                    onClick={() => setMappingResult(null)}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10 transition"
+                  >
+                    {t.reset}
+                  </button>
+                </div>
               )}
             </div>
 
