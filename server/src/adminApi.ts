@@ -147,36 +147,52 @@ adminApiRouter.get('/admin/calls', requireAdmin, (req: Request, res: Response) =
     const endpoint = typeof req.query.endpoint === 'string' ? req.query.endpoint.trim() : '';
     const clientId = typeof req.query.clientId === 'string' ? req.query.clientId.trim() : '';
     const userId = typeof req.query.userId === 'string' ? req.query.userId.trim() : '';
+    const email = typeof req.query.email === 'string' ? req.query.email.trim() : '';
 
     const where: string[] = [];
     const params: any[] = [];
     if (endpoint) {
-      where.push(`endpoint = ?`);
+      where.push(`ac.endpoint = ?`);
       params.push(endpoint);
     }
     if (clientId) {
-      where.push(`client_id = ?`);
+      where.push(`ac.client_id = ?`);
       params.push(clientId);
     }
     if (userId) {
-      where.push(`user_id = ?`);
+      where.push(`ac.user_id = ?`);
       params.push(userId);
+    }
+    if (email) {
+      where.push(`lower(u.email) like ?`);
+      params.push(`%${email.toLowerCase()}%`);
     }
 
     const whereSql = where.length ? `where ${where.join(' and ')}` : '';
     const rowsRes = await pool.query(
-      `select id, ts, user_id as "userId", client_id as "clientId", endpoint, status_code as "statusCode", duration_ms as "durationMs",
-              request_meta as "requestMeta", response_meta as "responseMeta", error
-       from api_calls
+      `select
+         ac.id, ac.ts,
+         ac.user_id as "userId",
+         u.email as "userEmail",
+         ac.client_id as "clientId",
+         ac.endpoint,
+         ac.status_code as "statusCode",
+         ac.duration_ms as "durationMs",
+         ac.request_meta as "requestMeta",
+         ac.response_meta as "responseMeta",
+         ac.error
+       from api_calls ac
+       left join users u on u.id = ac.user_id
        ${whereSql}
-       order by ts desc
+       order by ac.ts desc
        limit ? offset ?`,
       [...params, limit, offset],
     );
 
     const countRes = await pool.query(
       `select count(*) as n
-       from api_calls
+       from api_calls ac
+       left join users u on u.id = ac.user_id
        ${whereSql}`,
       params,
     );

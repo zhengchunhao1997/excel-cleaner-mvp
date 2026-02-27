@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 
 export const serveAdminPage = (req: Request, res: Response) => {
-  const token = typeof req.query.token === 'string' ? req.query.token : '';
+  const token =
+    (typeof req.query.token === 'string' ? req.query.token : '') ||
+    (typeof req.query.jwt === 'string' ? req.query.jwt : '');
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(`<!doctype html>
 <html lang="zh-CN">
@@ -30,10 +32,12 @@ export const serveAdminPage = (req: Request, res: Response) => {
     @media (max-width: 900px) { .kpi { grid-template-columns: repeat(2, 1fr); } }
     .k { border: 1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.30); border-radius: 14px; padding: 12px; }
     .k .v { font-size: 20px; font-weight: 800; }
+    .k .s { font-size: 12px; color: rgba(228,228,231,.7); margin-top: 2px; }
     .bar { height: 10px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
     .bar > i { display: block; height: 100%; background: rgba(245,158,11,.9); }
     .split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; color: rgba(228,228,231,.85); }
+    .spark { width: 100%; height: 78px; border-radius: 14px; border: 1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.25); overflow: hidden; }
 
     /* Modal / Toast UI */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
@@ -67,7 +71,7 @@ export const serveAdminPage = (req: Request, res: Response) => {
     <div class="row" style="justify-content: space-between">
       <div>
         <div class="h">excelMerge - 后台数据面板</div>
-        <div class="muted">按天 / 周 / 月查看使用情况与反馈。数据存储在 PostgreSQL。</div>
+        <div class="muted">按天 / 周 / 月查看使用情况与反馈。数据存储在 MySQL。</div>
       </div>
       <div class="row">
         <div id="user_info" class="row" style="margin-right: 12px">
@@ -105,6 +109,14 @@ export const serveAdminPage = (req: Request, res: Response) => {
           <div class="k"><div class="muted">分析成功</div><div class="v" id="kpi_analyze_ok">-</div></div>
           <div class="k"><div class="muted">导出（Join / Append）</div><div class="v" id="kpi_export">-</div></div>
         </div>
+        <div class="kpi" style="margin-top: 12px">
+          <div class="k"><div class="muted">访问量（PV）</div><div class="v" id="kpi_pv">-</div><div class="s" id="kpi_pv_hint">-</div></div>
+          <div class="k"><div class="muted">独立 IP</div><div class="v" id="kpi_ip">-</div><div class="s">按近周期去重</div></div>
+          <div class="k"><div class="muted">国内（CN）</div><div class="v" id="kpi_cn">-</div><div class="s" id="kpi_cn_pct">-</div></div>
+          <div class="k"><div class="muted">海外</div><div class="v" id="kpi_overseas">-</div><div class="s" id="kpi_overseas_pct">-</div></div>
+        </div>
+        <div style="margin-top: 12px" class="muted">PV 走势（近周期 buckets）</div>
+        <div id="pv_chart" class="spark" style="margin-top: 8px"></div>
         <div style="margin-top: 12px" class="muted">近周期分布</div>
         <div id="bars" style="display: grid; gap: 10px; margin-top: 8px"></div>
       </div>
@@ -133,7 +145,7 @@ export const serveAdminPage = (req: Request, res: Response) => {
         <table>
           <thead>
             <tr>
-              <th style="width: 120px">bucket</th>
+              <th style="width: 120px">周期</th>
               <th style="width: 120px">活跃用户</th>
               <th style="width: 120px">上传</th>
               <th style="width: 120px">分析成功</th>
@@ -160,15 +172,15 @@ export const serveAdminPage = (req: Request, res: Response) => {
               <option value="calls">调用记录（api_calls）</option>
               <option value="events">事件（telemetry_events）</option>
             </select>
-            <input id="log_type" placeholder="type/endpoint (可选)" style="width: 180px" />
-            <input id="log_client" placeholder="clientId (可选)" style="width: 220px" />
-            <input id="log_user" placeholder="userId (可选)" style="width: 240px" />
+            <input id="log_type" placeholder="类型/接口（可选）" style="width: 180px" />
+            <input id="log_client" placeholder="客户端ID（可选）" style="width: 220px" />
+            <input id="log_user" placeholder="用户邮箱（可选）" style="width: 260px" />
             <button id="log_refresh">查询</button>
           </div>
         </div>
         <div style="margin-top: 10px; max-height: 520px; overflow: auto; border-radius: 12px; border: 1px solid rgba(255,255,255,.08)">
           <table>
-            <thead><tr><th style="width: 150px">时间</th><th style="width: 210px">type/endpoint</th><th style="width: 260px">clientId</th><th style="width: 260px">userId</th><th>meta</th></tr></thead>
+            <thead><tr><th style="width: 150px">时间</th><th style="width: 210px">类型/接口</th><th style="width: 280px">客户端ID</th><th style="width: 260px">用户邮箱</th><th style="min-width: 560px">详情</th></tr></thead>
             <tbody id="log_rows"></tbody>
           </table>
         </div>
@@ -188,13 +200,13 @@ export const serveAdminPage = (req: Request, res: Response) => {
             <div class="muted">匿名 clientId 维度：首次/最近活跃、调用次数、反馈次数。</div>
           </div>
           <div class="row">
-            <input id="user_q" placeholder="搜索 clientId" style="width: 260px" />
+            <input id="user_q" placeholder="搜索 客户端ID" style="width: 260px" />
             <button id="user_refresh">查询</button>
           </div>
         </div>
         <div style="margin-top: 10px; max-height: 520px; overflow: auto; border-radius: 12px; border: 1px solid rgba(255,255,255,.08)">
           <table>
-            <thead><tr><th style="width: 260px">clientId</th><th style="width: 160px">firstSeen</th><th style="width: 160px">lastSeen</th><th style="width: 90px">events</th><th style="width: 90px">analyze</th><th style="width: 90px">export</th><th style="width: 90px">feedback</th></tr></thead>
+            <thead><tr><th style="width: 300px">客户端ID</th><th style="width: 170px">首次出现</th><th style="width: 170px">最近活跃</th><th style="width: 90px">事件数</th><th style="width: 90px">分析</th><th style="width: 90px">导出</th><th style="width: 90px">反馈</th></tr></thead>
             <tbody id="user_rows"></tbody>
           </table>
         </div>
@@ -210,17 +222,17 @@ export const serveAdminPage = (req: Request, res: Response) => {
       <div class="card">
         <div class="row" style="justify-content: space-between">
           <div>
-            <div class="h">账号（users）</div>
+            <div class="h">账号（邮箱）</div>
             <div class="muted">邮箱账号：配额/计划/登录时间。</div>
           </div>
           <div class="row">
-            <input id="acc_q" placeholder="搜索 email" style="width: 260px" />
+            <input id="acc_q" placeholder="搜索 邮箱" style="width: 260px" />
             <button id="acc_refresh">查询</button>
           </div>
         </div>
         <div style="margin-top: 10px; max-height: 520px; overflow: auto; border-radius: 12px; border: 1px solid rgba(255,255,255,.08)">
           <table>
-            <thead><tr><th style="width: 260px">email</th><th style="width: 280px">id</th><th style="width: 90px">plan</th><th style="width: 90px">analyze/day</th><th style="width: 90px">export/day</th><th style="width: 160px">createdAt</th><th style="width: 160px">lastLoginAt</th></tr></thead>
+            <thead><tr><th style="width: 300px">邮箱</th><th style="width: 320px">账号ID</th><th style="width: 90px">计划</th><th style="width: 120px">分析/天</th><th style="width: 120px">导出/天</th><th style="width: 170px">注册时间</th><th style="width: 170px">最近登录</th></tr></thead>
             <tbody id="acc_rows"></tbody>
           </table>
         </div>
@@ -291,8 +303,9 @@ export const serveAdminPage = (req: Request, res: Response) => {
       localStorage.setItem('admin_token', ADMIN_TOKEN);
       // 清理 URL 中的 token 避免刷新后还在 URL 里
       const url = new URL(location.href);
-      if (url.searchParams.has('token')) {
+      if (url.searchParams.has('token') || url.searchParams.has('jwt')) {
         url.searchParams.delete('token');
+        url.searchParams.delete('jwt');
         history.replaceState(null, '', url.href);
       }
     } else {
@@ -412,6 +425,43 @@ export const serveAdminPage = (req: Request, res: Response) => {
       }
     }
 
+    const renderPvChart = (buckets) => {
+      const el = $('pv_chart')
+      if (!el) return
+      const pts = (buckets || []).map((b) => ({ k: b.key, v: ((b.byType && b.byType.page_view) || 0) }))
+      const max = Math.max(1, ...pts.map(p => p.v))
+      const w = 1000
+      const h = 78
+      const padX = 10
+      const padY = 10
+      const n = Math.max(1, pts.length)
+      const dx = (w - padX * 2) / Math.max(1, n - 1)
+      const toX = (i) => padX + i * dx
+      const toY = (v) => (h - padY) - ((v / max) * (h - padY * 2))
+      const d = pts
+        .map((p, i) => (i === 0 ? 'M' : 'L') + ' ' + toX(i).toFixed(2) + ' ' + toY(p.v).toFixed(2))
+        .join(' ')
+      const area =
+        'M ' + String(padX) + ' ' + String(h - padY) + ' ' +
+        pts.map((p, i) => 'L ' + toX(i).toFixed(2) + ' ' + toY(p.v).toFixed(2)).join(' ') +
+        ' L ' + String(padX + (n - 1) * dx) + ' ' + String(h - padY) + ' Z'
+      el.innerHTML =
+        '<svg viewBox="0 0 ' + String(w) + ' ' + String(h) + '" width="100%" height="100%" preserveAspectRatio="none">' +
+          '<defs>' +
+            '<linearGradient id="pv_g" x1="0" y1="0" x2="0" y2="1">' +
+              '<stop offset="0%" stop-color="rgba(245,158,11,0.40)" />' +
+              '<stop offset="100%" stop-color="rgba(245,158,11,0.02)" />' +
+            '</linearGradient>' +
+            '<linearGradient id="pv_s" x1="0" y1="0" x2="1" y2="0">' +
+              '<stop offset="0%" stop-color="rgba(56,189,248,0.9)" />' +
+              '<stop offset="100%" stop-color="rgba(245,158,11,0.9)" />' +
+            '</linearGradient>' +
+          '</defs>' +
+          '<path d="' + area + '" fill="url(#pv_g)"></path>' +
+          '<path d="' + d + '" fill="none" stroke="url(#pv_s)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></path>' +
+        '</svg>'
+    }
+
     const renderTable = (buckets) => {
       const tbody = $('rows')
       tbody.innerHTML = ''
@@ -497,13 +547,13 @@ export const serveAdminPage = (req: Request, res: Response) => {
       const source = $('log_source').value
       const type = $('log_type').value.trim()
       const clientId = $('log_client').value.trim()
-      const userId = $('log_user').value.trim()
+      const email = $('log_user').value.trim()
       const params = new URLSearchParams()
       params.set('limit', String(logLimit))
       params.set('offset', String(logOffset))
       if (source === 'calls') {
         if (type) params.set('endpoint', type)
-        if (userId) params.set('userId', userId)
+        if (email) params.set('email', email)
       } else {
         if (type) params.set('type', type)
       }
@@ -514,6 +564,7 @@ export const serveAdminPage = (req: Request, res: Response) => {
       for (const it of data.items || []) {
         const tr = document.createElement('tr')
         const kind = source === 'calls' ? it.endpoint : it.type
+        const emailText = source === 'calls' ? (it.userEmail || '') : ''
         const meta = source === 'calls'
           ? ({ statusCode: it.statusCode, durationMs: it.durationMs, request: it.requestMeta, response: it.responseMeta, error: it.error })
           : (it.props || null)
@@ -521,8 +572,8 @@ export const serveAdminPage = (req: Request, res: Response) => {
           '<td>' + safe(String(it.ts).slice(0, 19).replace('T',' ')) + '</td>' +
           '<td>' + safe(kind || '') + '</td>' +
           '<td>' + safe(it.clientId || '') + '</td>' +
-          '<td>' + safe(it.userId || '') + '</td>' +
-          '<td><pre>' + safe(meta ? JSON.stringify(meta, null, 2) : '') + '</pre></td>'
+          '<td>' + safe(emailText) + '</td>' +
+          '<td style="min-width:560px"><pre>' + safe(meta ? JSON.stringify(meta, null, 2) : '') + '</pre></td>'
         tbody.appendChild(tr)
       }
       const total = Number(data.total || 0)
@@ -632,6 +683,19 @@ export const serveAdminPage = (req: Request, res: Response) => {
       const join = (stats.exportsTotals || {}).join || 0
       const append = (stats.exportsTotals || {}).append || 0
       $('kpi_export').textContent = join + ' / ' + append
+      const pv = Number(stats.pageViews || 0)
+      const cn = Number(stats.pageViewsCn || 0)
+      const ov = Number(stats.pageViewsOverseas || 0)
+      const unk = Number(stats.pageViewsUnknown || 0)
+      $('kpi_pv').textContent = fmt(pv)
+      $('kpi_ip').textContent = fmt(stats.uniqueIps || 0)
+      $('kpi_cn').textContent = fmt(cn)
+      $('kpi_overseas').textContent = fmt(ov)
+      const denom = Math.max(1, cn + ov + unk)
+      $('kpi_cn_pct').textContent = '占比 ' + String(Math.round((cn / denom) * 100)) + '%'
+      $('kpi_overseas_pct').textContent = '占比 ' + String(Math.round((ov / denom) * 100)) + '%'
+      $('kpi_pv_hint').textContent = '未知 ' + String(unk)
+      renderPvChart(stats.buckets || [])
       renderBars(stats.buckets || [])
       renderTable(stats.buckets || [])
 
