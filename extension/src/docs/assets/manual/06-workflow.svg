@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b0b10"/>
+      <stop offset="1" stop-color="#050507"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <style>
+      .t1{font:700 28px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;fill:#e5e7eb}
+      .t2{font:700 16px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;fill:#e5e7eb}
+      .t3{font:500 14px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;fill:#a1a1aa}
+      .card{fill:rgba(255,255,255,0.04);stroke:rgba(255,255,255,0.10);stroke-width:2}
+      .step{fill:rgba(0,0,0,0.35);stroke:rgba(255,255,255,0.10);stroke-width:2}
+      .line{stroke:url(#accent);stroke-width:4;stroke-linecap:round}
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="520" fill="url(#bg)"/>
+  <rect x="32" y="28" width="1136" height="80" rx="20" class="card"/>
+  <text x="60" y="78" class="t1">excelMerge 使用流程（适用于“导出表头不一致”的场景）</text>
+  <text x="60" y="102" class="t3">目标：把多份导出表快速变成一张“可分析/可对账”的标准表。</text>
+
+  <rect x="60" y="160" width="260" height="120" rx="18" class="step"/>
+  <text x="84" y="196" class="t2">1. 上传文件</text>
+  <text x="84" y="224" class="t3">拖入多个 Excel/CSV</text>
+  <text x="84" y="246" class="t3">每个文件可选表头行</text>
+
+  <rect x="350" y="160" width="260" height="120" rx="18" class="step"/>
+  <text x="374" y="196" class="t2">2. 智能分析</text>
+  <text x="374" y="224" class="t3">生成统一字段（Schema）</text>
+  <text x="374" y="246" class="t3">自动给出映射建议</text>
+
+  <rect x="640" y="160" width="260" height="120" rx="18" class="step"/>
+  <text x="664" y="196" class="t2">3. 人工校正</text>
+  <text x="664" y="224" class="t3">点击单元格修正映射</text>
+  <text x="664" y="246" class="t3">保存模板（可选）</text>
+
+  <rect x="930" y="160" width="210" height="120" rx="18" class="step"/>
+  <text x="954" y="196" class="t2">4. 导出</text>
+  <text x="954" y="224" class="t3">Append 或 Join</text>
+  <text x="954" y="246" class="t3">生成干净数据</text>
+
+  <line x1="320" y1="220" x2="350" y2="220" class="line"/>
+  <line x1="610" y1="220" x2="640" y2="220" class="line"/>
+  <line x1="900" y1="220" x2="930" y2="220" class="line"/>
+
+  <rect x="60" y="310" width="1080" height="160" rx="22" class="card"/>
+  <text x="84" y="350" class="t2">解决的核心问题</text>
+  <text x="84" y="378" class="t3">- 多平台导出字段不一致（手机号/Phone/Mobile，订单号/Order ID 等）</text>
+  <text x="84" y="402" class="t3">- 手工对齐列名、复制粘贴合并耗时且容易出错</text>
+  <text x="84" y="426" class="t3">- Join 对账：按主键把多表合成“一行一条记录”，提升核对效率</text>
+</svg>
+

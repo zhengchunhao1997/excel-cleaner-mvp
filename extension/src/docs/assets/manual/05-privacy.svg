@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b0b10"/>
+      <stop offset="1" stop-color="#050507"/>
+    </linearGradient>
+    <linearGradient id="ok" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="warn" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#f97316"/>
+    </linearGradient>
+    <style>
+      .t1{font:700 28px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;fill:#e5e7eb}
+      .t2{font:600 18px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;fill:#e5e7eb}
+      .t3{font:500 14px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;fill:#a1a1aa}
+      .card{fill:rgba(255,255,255,0.04);stroke:rgba(255,255,255,0.10);stroke-width:2}
+      .chip{fill:rgba(255,255,255,0.06);stroke:rgba(255,255,255,0.10);stroke-width:2}
+      .arrow{stroke:rgba(255,255,255,0.22);stroke-width:3;stroke-linecap:round}
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="520" fill="url(#bg)"/>
+  <rect x="32" y="28" width="1136" height="80" rx="20" class="card"/>
+  <text x="60" y="78" class="t1">隐私与数据流：只发送“表头”，不上传“表内容”</text>
+  <text x="60" y="102" class="t3">excelMerge 的设计目标：让你能放心把真实业务数据留在本地。</text>
+
+  <rect x="32" y="130" width="552" height="360" rx="22" class="card"/>
+  <rect x="616" y="130" width="552" height="360" rx="22" class="card"/>
+
+  <text x="56" y="168" class="t2">本地（浏览器/电脑）</text>
+  <text x="640" y="168" class="t2">服务端（AI 建议 / 统计）</text>
+
+  <rect x="56" y="200" width="504" height="120" rx="18" class="card"/>
+  <text x="76" y="236" class="t2">读取与合并</text>
+  <text x="76" y="264" class="t3">1) 读取 Excel/CSV</text>
+  <text x="76" y="286" class="t3">2) 生成映射、合并、导出</text>
+  <text x="76" y="308" class="t3">3) 结果文件保存在本地</text>
+
+  <rect x="56" y="340" width="504" height="120" rx="18" class="card"/>
+  <text x="76" y="376" class="t2">绝不上传：表格内容</text>
+  <text x="76" y="404" class="t3">行数据、金额、客户信息等不会被上传</text>
+
+  <line x1="584" y1="260" x2="616" y2="260" class="arrow"/>
+  <polygon points="616,260 604,252 604,268" fill="rgba(255,255,255,0.22)"/>
+
+  <rect x="640" y="200" width="504" height="120" rx="18" class="card"/>
+  <text x="660" y="236" class="t2">发送：表头信息（Headers-only）</text>
+  <text x="660" y="264" class="t3">文件名 + 表头列表，用于建议“统一字段/映射”</text>
+  <rect x="660" y="284" width="120" height="26" rx="13" fill="rgba(52,211,153,0.10)" stroke="rgba(52,211,153,0.35)" stroke-width="2"/>
+  <text x="674" y="303" style="font:600 13px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;fill:#bbf7d0">允许</text>
+
+  <rect x="640" y="340" width="504" height="120" rx="18" class="card"/>
+  <text x="660" y="376" class="t2">记录：匿名统计（可选）</text>
+  <text x="660" y="404" class="t3">例如 PV、调用耗时、统一字段数量等（不含业务数据）</text>
+  <rect x="660" y="424" width="120" height="26" rx="13" fill="rgba(245,158,11,0.10)" stroke="rgba(245,158,11,0.35)" stroke-width="2"/>
+  <text x="674" y="443" style="font:600 13px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;fill:#fde68a">可选</text>
+</svg>
+

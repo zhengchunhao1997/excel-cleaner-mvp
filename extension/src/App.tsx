@@ -5,7 +5,8 @@ import * as XLSX from 'xlsx';
 import { translations, type Language } from './i18n';
 import { getClientId, submitFeedback, trackEvent } from './telemetry';
 import LandingPage from './LandingPage';
-import { getDocsContent, type DocsSectionId } from './docsContent';
+import { tutorialSteps } from './tutorialSteps';
+import { markTutorialShownSession, setTutorialNeverShow, shouldAutoShowTutorial } from './tutorialPrefs';
 import {
   applyTemplateToFiles,
   enforceTemplatesLimit,
@@ -57,7 +58,7 @@ function App() {
     return browserLang.startsWith('zh') ? 'zh' : 'en';
   });
   const [docsOpen, setDocsOpen] = useState(false);
-  const [docsSection, setDocsSection] = useState<DocsSectionId>('quick_start');
+  const [docsStep, setDocsStep] = useState(0);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState<number>(5);
   const [feedbackEmail, setFeedbackEmail] = useState<string>('');
@@ -88,15 +89,15 @@ function App() {
   const TEMPLATE_LIMIT = 50;
 
   useEffect(() => {
-    if (showLanding) return;
     try {
-      if (!localStorage.getItem('docs_seen')) {
-        setDocsSection('quick_start');
+      if (shouldAutoShowTutorial(localStorage, sessionStorage)) {
+        markTutorialShownSession(sessionStorage);
+        setDocsStep(0);
         setDocsOpen(true);
       }
     } catch {
     }
-  }, [showLanding]);
+  }, []);
 
   useEffect(() => {
     try {
@@ -801,8 +802,111 @@ function App() {
     }
   };
 
+  const TutorialOverlay = () => {
+    if (!docsOpen) return null;
+    const total = tutorialSteps.length;
+    const idx = Math.max(0, Math.min(total - 1, docsStep));
+    const step = tutorialSteps[idx];
+    return (
+      <div className="fixed inset-0 z-[100]">
+        <button
+          type="button"
+          className="absolute inset-0 bg-black/70"
+          onClick={() => setDocsOpen(false)}
+          aria-label="Close tutorial"
+        />
+        <div className="absolute inset-x-0 top-0 mx-auto mt-6 w-[min(1040px,calc(100%-2rem))] rounded-3xl border border-white/10 bg-zinc-950/95 backdrop-blur shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10 bg-black/30">
+            <div className="min-w-0">
+              <div className="text-xs text-zinc-400">{lang === 'zh' ? '使用教程' : 'Tutorial'}</div>
+              <div className="text-sm font-semibold text-zinc-100 truncate">{step.title[lang]}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDocsOpen(false)}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10 transition inline-flex items-center gap-2"
+            >
+              <X className="h-4 w-4 text-zinc-300" />
+              {t.close}
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_420px]">
+            <div className="p-5 md:p-6">
+              <div className="text-[13px] leading-relaxed text-zinc-200">{step.desc[lang]}</div>
+              <div className="mt-4 flex items-center gap-2">
+                {Array.from({ length: total }).map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setDocsStep(i)}
+                    className={[
+                      'h-2.5 w-2.5 rounded-full border transition',
+                      i === idx ? 'bg-amber-300/90 border-amber-300/60' : 'bg-white/5 border-white/10 hover:bg-white/10',
+                    ].join(' ')}
+                    aria-label={`Step ${i + 1}`}
+                  />
+                ))}
+              </div>
+              <div className="mt-6 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={idx === 0}
+                    onClick={() => setDocsStep((v) => Math.max(0, v - 1))}
+                    className={[
+                      'rounded-xl border px-3 py-2 text-xs transition',
+                      idx === 0 ? 'border-white/10 bg-white/5 text-zinc-500 cursor-not-allowed' : 'border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10',
+                    ].join(' ')}
+                  >
+                    {lang === 'zh' ? '上一步' : 'Back'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        setTutorialNeverShow(localStorage);
+                      } catch {
+                      }
+                      setDocsOpen(false);
+                    }}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10 transition"
+                  >
+                    {lang === 'zh' ? '不再显示' : "Don't show again"}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (idx >= total - 1) {
+                      setDocsOpen(false);
+                      return;
+                    }
+                    setDocsStep((v) => Math.min(total - 1, v + 1));
+                  }}
+                  className="rounded-2xl bg-amber-400/90 px-4 py-2 text-xs font-semibold text-zinc-950 hover:bg-amber-300 transition"
+                >
+                  {idx >= total - 1 ? (lang === 'zh' ? '开始使用' : 'Start') : (lang === 'zh' ? '下一步' : 'Next')}
+                </button>
+              </div>
+            </div>
+            <div className="border-t md:border-t-0 md:border-l border-white/10 bg-black/20 p-4 md:p-5">
+              <div className="rounded-2xl border border-white/10 bg-black/30 overflow-hidden">
+                <img src={step.image} alt={step.title[lang]} className="w-full h-[320px] md:h-[360px] object-contain" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (showLanding) {
-    return <LandingPage onStart={() => setShowLanding(false)} lang={lang} setLang={setLang} />;
+    return (
+      <>
+        <LandingPage onStart={() => setShowLanding(false)} lang={lang} setLang={setLang} />
+        <TutorialOverlay />
+      </>
+    );
   }
 
   return (
@@ -842,12 +946,18 @@ function App() {
               </button>
             )}
             <button
-              onClick={() => setDocsOpen(true)}
+              onClick={() => {
+                setDocsStep(0);
+                setDocsOpen(true);
+              }}
               className="relative inline-flex items-center gap-2 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-2 text-xs font-medium text-amber-100 hover:bg-amber-400/15 hover:border-amber-400/35 transition shadow-[0_10px_40px_-18px_rgba(245,158,11,0.55)]"
             >
               {(() => {
                 try {
-                  return !localStorage.getItem('docs_seen');
+                  const never = String(localStorage.getItem('tutorial_never_show') || '').trim();
+                  if (never === '1' || never.toLowerCase() === 'true') return false;
+                  const shown = String(sessionStorage.getItem('tutorial_shown_session') || '').trim();
+                  return !(shown === '1' || shown.toLowerCase() === 'true');
                 } catch {
                   return false;
                 }
@@ -896,142 +1006,7 @@ function App() {
           </div>
         </header>
 
-        {docsOpen && (
-          <div className="absolute inset-0 z-50">
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/70"
-              onClick={() => {
-                try {
-                  localStorage.setItem('docs_seen', '1');
-                } catch {
-                }
-                setDocsOpen(false);
-              }}
-              aria-label="Close docs"
-            />
-            <div className="absolute inset-x-0 top-0 mx-auto mt-4 w-[min(980px,calc(100%-2rem))] h-[calc(100%-2rem)] rounded-2xl border border-white/10 bg-zinc-950/95 backdrop-blur shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 bg-black/30">
-                <div className="text-sm font-semibold text-zinc-100">{t.docsTitle}</div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    try {
-                      localStorage.setItem('docs_seen', '1');
-                    } catch {
-                    }
-                    setDocsOpen(false);
-                  }}
-                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10 transition inline-flex items-center gap-2"
-                >
-                  <X className="h-4 w-4 text-zinc-300" />
-                  {t.close}
-                </button>
-              </div>
-              <div className="h-[calc(100%-52px)] overflow-hidden">
-                {(() => {
-                  const docs = getDocsContent(lang);
-                  const section = docs.sections.find((s) => s.id === docsSection) || docs.sections[0];
-                  const seen = (() => {
-                    try {
-                      return Boolean(localStorage.getItem('docs_seen'));
-                    } catch {
-                      return true;
-                    }
-                  })();
-                  return (
-                    <div className="h-full grid grid-cols-1 md:grid-cols-[260px_1fr]">
-                      <div className="border-b md:border-b-0 md:border-r border-white/10 bg-black/20">
-                        <div className="p-4">
-                          <div className="text-xs text-zinc-400">{docs.title}</div>
-                          {!seen && (
-                            <div className="mt-2 text-[11px] text-amber-200/90">
-                              {lang === 'zh' ? '建议先看 30 秒：快速开始 → 导出。' : 'Start here: Quick Start → Export.'}
-                            </div>
-                          )}
-                        </div>
-                        <div className="px-2 pb-3 overflow-auto h-[calc(100%-56px)]">
-                          {docs.sections.map((s) => (
-                            <button
-                              key={s.id}
-                              type="button"
-                              onClick={() => setDocsSection(s.id)}
-                              className={[
-                                'w-full text-left px-3 py-2 rounded-xl border transition mb-1',
-                                s.id === section.id
-                                  ? 'border-amber-400/30 bg-amber-400/10 text-amber-100'
-                                  : 'border-transparent hover:border-white/10 hover:bg-white/5 text-zinc-200',
-                              ].join(' ')}
-                            >
-                              <div className="text-xs font-medium">{s.title}</div>
-                              {s.subtitle && <div className="text-[11px] text-zinc-400 mt-0.5">{s.subtitle}</div>}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="overflow-auto p-4 md:p-6">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <div className="text-lg font-semibold text-zinc-50">{section.title}</div>
-                            {section.subtitle && <div className="mt-1 text-xs text-zinc-400">{section.subtitle}</div>}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              try {
-                                localStorage.setItem('docs_seen', '1');
-                              } catch {
-                              }
-                              setDocsOpen(false);
-                            }}
-                            className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10 transition inline-flex items-center gap-2"
-                          >
-                            <X className="h-4 w-4 text-zinc-300" />
-                            {t.close}
-                          </button>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-1 gap-3">
-                          {section.cards.map((c, idx) => (
-                            <div key={idx} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                              <div className="text-sm font-semibold text-zinc-100">{c.title}</div>
-                              {c.description && <div className="mt-1 text-xs text-zinc-300">{c.description}</div>}
-                              {c.steps && (
-                                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  {c.steps.map((st, sidx) => (
-                                    <div key={sidx} className="rounded-2xl border border-white/10 bg-black/30 p-3">
-                                      <div className="flex items-center gap-2">
-                                        <div className="h-6 w-6 rounded-lg border border-amber-400/25 bg-amber-400/10 text-amber-200 flex items-center justify-center text-[11px] font-semibold">
-                                          {sidx + 1}
-                                        </div>
-                                        <div className="text-xs font-semibold text-zinc-100">{st.title}</div>
-                                      </div>
-                                      <div className="mt-2 text-[11px] leading-relaxed text-zinc-300">{st.detail}</div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              {c.bullets && (
-                                <ul className="mt-3 space-y-2 text-[11px] leading-relaxed text-zinc-300">
-                                  {c.bullets.map((b, bidx) => (
-                                    <li key={bidx} className="flex gap-2">
-                                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-300/80" />
-                                      <span className="min-w-0">{b}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
+        <TutorialOverlay />
 
         {saveTemplateOpen && (
           <div className="absolute inset-0 z-50 flex items-center justify-center p-4">

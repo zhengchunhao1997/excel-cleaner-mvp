@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b0b10"/>
+      <stop offset="1" stop-color="#050507"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <style>
+      .t1{font:700 28px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;fill:#e5e7eb}
+      .t2{font:600 18px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;fill:#e5e7eb}
+      .t3{font:500 14px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;fill:#a1a1aa}
+      .card{fill:rgba(255,255,255,0.04);stroke:rgba(255,255,255,0.10);stroke-width:2}
+      .pill{fill:rgba(245,158,11,0.10);stroke:rgba(245,158,11,0.35);stroke-width:2}
+      .grid{stroke:rgba(255,255,255,0.08);stroke-width:1}
+      .line{stroke:url(#accent);stroke-width:4;stroke-linecap:round}
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="520" fill="url(#bg)"/>
+  <rect x="32" y="28" width="1136" height="80" rx="20" class="card"/>
+  <text x="60" y="78" class="t1">导出模式：追加合并（Append） vs 按主键合并（Join）</text>
+  <text x="60" y="102" class="t3">Append：把多表“纵向叠起来”；Join：按主键把多表“横向拼到同一行”。</text>
+
+  <rect x="32" y="130" width="552" height="360" rx="22" class="card"/>
+  <rect x="616" y="130" width="552" height="360" rx="22" class="card"/>
+
+  <rect x="52" y="152" width="210" height="34" rx="17" class="pill"/>
+  <text x="70" y="175" class="t2">Append（追加）</text>
+  <text x="52" y="214" class="t3">典型场景：多份相似导出表，想合成一张“明细表”。</text>
+
+  <rect x="636" y="152" width="230" height="34" rx="17" class="pill"/>
+  <text x="654" y="175" class="t2">Join（按主键）</text>
+  <text x="636" y="214" class="t3">典型场景：订单表 + 回款表 + 客户表，按同一主键对齐。</text>
+
+  <rect x="60" y="250" width="240" height="98" rx="14" class="card"/>
+  <rect x="60" y="360" width="240" height="98" rx="14" class="card"/>
+  <rect x="316" y="250" width="240" height="208" rx="14" class="card"/>
+
+  <line x1="180" y1="348" x2="180" y2="360" class="line"/>
+  <line x1="300" y1="299" x2="316" y2="299" class="line"/>
+  <line x1="300" y1="409" x2="316" y2="409" class="line"/>
+
+  <text x="76" y="282" class="t3">文件 A（3 行）</text>
+  <line x1="72" y1="294" x2="284" y2="294" class="grid"/>
+  <line x1="72" y1="318" x2="284" y2="318" class="grid"/>
+  <line x1="72" y1="342" x2="284" y2="342" class="grid"/>
+
+  <text x="76" y="392" class="t3">文件 B（2 行）</text>
+  <line x1="72" y1="404" x2="284" y2="404" class="grid"/>
+  <line x1="72" y1="428" x2="284" y2="428" class="grid"/>
+  <line x1="72" y1="452" x2="284" y2="452" class="grid"/>
+
+  <text x="332" y="282" class="t3">导出结果（5 行）</text>
+  <line x1="328" y1="294" x2="540" y2="294" class="grid"/>
+  <line x1="328" y1="318" x2="540" y2="318" class="grid"/>
+  <line x1="328" y1="342" x2="540" y2="342" class="grid"/>
+  <line x1="328" y1="366" x2="540" y2="366" class="grid"/>
+  <line x1="328" y1="390" x2="540" y2="390" class="grid"/>
+  <line x1="328" y1="414" x2="540" y2="414" class="grid"/>
+  <line x1="328" y1="438" x2="540" y2="438" class="grid"/>
+
+  <rect x="644" y="250" width="240" height="98" rx="14" class="card"/>
+  <rect x="644" y="360" width="240" height="98" rx="14" class="card"/>
+  <rect x="900" y="250" width="240" height="208" rx="14" class="card"/>
+
+  <line x1="884" y1="299" x2="900" y2="299" class="line"/>
+  <line x1="884" y1="409" x2="900" y2="409" class="line"/>
+
+  <text x="660" y="282" class="t3">订单表（按订单号）</text>
+  <line x1="656" y1="294" x2="868" y2="294" class="grid"/>
+  <line x1="656" y1="318" x2="868" y2="318" class="grid"/>
+  <line x1="656" y1="342" x2="868" y2="342" class="grid"/>
+
+  <text x="660" y="392" class="t3">回款表（按订单号）</text>
+  <line x1="656" y1="404" x2="868" y2="404" class="grid"/>
+  <line x1="656" y1="428" x2="868" y2="428" class="grid"/>
+  <line x1="656" y1="452" x2="868" y2="452" class="grid"/>
+
+  <text x="916" y="282" class="t3">导出结果（一行一单）</text>
+  <line x1="912" y1="294" x2="1124" y2="294" class="grid"/>
+  <line x1="912" y1="318" x2="1124" y2="318" class="grid"/>
+  <line x1="912" y1="342" x2="1124" y2="342" class="grid"/>
+  <line x1="912" y1="366" x2="1124" y2="366" class="grid"/>
+  <line x1="912" y1="390" x2="1124" y2="390" class="grid"/>
+  <line x1="912" y1="414" x2="1124" y2="414" class="grid"/>
+  <line x1="912" y1="438" x2="1124" y2="438" class="grid"/>
+</svg>
+
